@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  reddit-posts-gatherer
+
+  Stack to gather Reddit posts/submissions
+
+Parameters:
+  RedditClientID:
+    Type: String
+    Default: REDDIT_CLIENT_ID
+  RedditClientSecret:
+    Type: String
+    Default: REDDIT_CLIENT_SECRET
+  RedditPassword:
+    Type: String
+    Default: REDDIT_PASSWORD
+  RedditUserAgent:
+    Type: String
+    Default: REDDIT_USERAGENT
+  RedditUsername:
+    Type: String
+    Default: REDDIT_USERNAME
+  MongoDBURL:
+    Type: String
+    Default: MONGODB_URL
+  DaysPerInterval:
+    Type: Number
+    Default: 1
+  SaveComments:
+    Type: Number
+    Default: 0
+  SaveSubreddits:
+    Type: Number
+    Default: 0
+  PortugueseStartDate:
+    Type: String
+    Default: START_DATE
+  PortugueseEndDate:
+    Type: String
+    Default: END_DATE
+  PortugueseSubreddits:
+    Type: String
+    Default: SUBREDDITS
+  PortugueseSearchKeywords:
+    Type: String
+    Default: SEARCH_KEYWORDS
+  EnglishStartDate:
+    Type: String
+    Default: START_DATE
+  EnglishEndDate:
+    Type: String
+    Default: END_DATE
+  EnglishSubreddits:
+    Type: String
+    Default: SUBREDDITS
+  EnglishSearchKeywords:
+    Type: String
+    Default: SEARCH_KEYWORDS
+
+Mappings:
+  config:
+    language:
+      portuguese: pt
+      english: en
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 900 # 15 min
+    CodeUri: src/
+    Handler: app.lambda_handler
+    Runtime: python3.8
+    Environment:
+      Variables:
+        LAST_SEARCHED_DATE_TABLE: !Sub "${AWS::StackName}-last-searched-date-table"
+        REDDIT_CLIENT_ID: !Ref RedditClientID
+        REDDIT_CLIENT_SECRET: !Ref RedditClientSecret
+        REDDIT_PASSWORD: !Ref RedditPassword
+        REDDIT_USERAGENT: !Ref RedditUserAgent
+        REDDIT_USERNAME: !Ref RedditUsername
+        MONGODB_URL: !Ref MongoDBURL
+        DAYS_PER_INTERVAL: !Ref DaysPerInterval
+        SAVE_COMMENTS: !Ref SaveComments
+        SAVE_SUBREDDITS: !Ref SaveSubreddits
+
+Resources:
+  LastSearchedDateDatabase:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName: id
+          AttributeType: S
+      KeySchema:
+        -
+          AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TableName: !Sub "${AWS::StackName}-last-searched-date-table"
+  
+  GatherPostsFunctionTrigger:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Triggers the lambda functions
+      Name: !Sub reddit-posts-gatherer-trigger
+      ScheduleExpression: rate(3 minutes)
+      Targets:
+        - Arn: !GetAtt GatherPostsInPortugueseFunction.Arn
+          Id: GatherPostsInPortugueseFunction
+        - Arn: !GetAtt GatherPostsInEnglishFunction.Arn
+          Id: GatherPostsInEnglishFunction
+  
+  GatherPostsInPortugueseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Gather reddit posts in portuguese given subreddits and keywords list
+      Environment:
+        Variables:
+          SUBREDDITS: !Ref PortugueseSubreddits
+          SEARCH_KEYWORDS: !Ref PortugueseSearchKeywords
+          START_DATE: !Ref PortugueseStartDate
+          END_DATE: !Ref PortugueseEndDate
+          LANGUAGE: !FindInMap [config, language, portuguese]
+          MONGO_DATABASE: !Join ["", ["reddit-posts-gatherer-", !FindInMap [config, language, portuguese]]]
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'dynamodb:PutItem'
+                - 'dynamodb:GetItem'
+              Resource:
+                - !Join ["", [!Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/", !Sub "${AWS::StackName}-last-searched-date-table"]]
+  
+  GatherPostsInPortugueseFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GatherPostsInPortugueseFunction.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt GatherPostsFunctionTrigger.Arn
+  
+  GatherPostsInPortugueseFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: GatherPostsInPortugueseFunction
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GatherPostsInPortugueseFunction}
+      RetentionInDays: 7
+  
+  GatherPostsInEnglishFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Gather reddit posts in english given subreddits and keywords list
+      Environment:
+        Variables:
+          SUBREDDITS: !Ref EnglishSubreddits
+          SEARCH_KEYWORDS: !Ref EnglishSearchKeywords
+          START_DATE: !Ref EnglishStartDate
+          END_DATE: !Ref EnglishEndDate
+          LANGUAGE: !FindInMap [config, language, english]
+          MONGO_DATABASE: !Join ["", ["reddit-posts-gatherer-", !FindInMap [config, language, english]]]
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'dynamodb:PutItem'
+                - 'dynamodb:GetItem'
+              Resource:
+                - !Join ["", [!Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/", !Sub "${AWS::StackName}-last-searched-date-table"]]
+  
+  GatherPostsInEnglishFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GatherPostsInEnglishFunction.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt GatherPostsFunctionTrigger.Arn
+  
+  GatherPostsInEnglishFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: GatherPostsInEnglishFunction
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GatherPostsInEnglishFunction}
+      RetentionInDays: 7

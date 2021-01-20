@@ -68,7 +68,7 @@ Mappings:
 Globals:
   Function:
     Timeout: 900 # 15 min
-    CodeUri: src/
+    CodeUri: ./
     Handler: app.lambda_handler
     Runtime: python3.8
     Environment:

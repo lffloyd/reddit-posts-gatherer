@@ -7,11 +7,11 @@ import os
 import praw
 import math
 from datetime import datetime
-from parsers.reddit_parser import get_comment_data, get_submission_data, get_subreddit_data, get_comments
-from services.reddit_service import insert_comment, insert_submission, insert_subreddit
-from integrations.pushshift import get_submissions_with_keywords_for_interval
-from utils.progress_bar import update_progress_bar
-from utils.time_interval import get_timestamps_interval
+from src.parsers.reddit_parser import get_comment_data, get_submission_data, get_subreddit_data, get_comments
+from src.services.reddit_service import insert_comment, insert_submission, insert_subreddit
+from src.integrations.pushshift import get_submissions_with_keywords_for_interval
+from src.utils.progress_bar import update_progress_bar
+from src.utils.time_interval import get_timestamps_interval
 
 
 DEFAULT_COLLECTIONS = {

@@ -1,4 +1,4 @@
-from db.mongo import mongo_db
+from src.db.mongo import mongo_db
 
 
 def insert_subreddit(subreddit, collection):

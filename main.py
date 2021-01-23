@@ -139,7 +139,7 @@ for k in range(len(subreddits)):
     subreddit = reddit.subreddit(subreddits[k])
     print("Subreddit name: " + subreddit.display_name)
 
-    if params['saveSubreddits'] == True:
+    if params['saveSubreddits']:
         subreddit_data = get_subreddit_data(subreddit)
         insert_subreddit(
             subreddit_data, 
@@ -163,7 +163,7 @@ for k in range(len(subreddits)):
             )
 
 
-        if params['saveComments'] == True:
+        if params['saveComments']:
             comments = get_comments(submission)
 
             total_comments = len(comments)

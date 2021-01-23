@@ -1,11 +1,9 @@
 import json
-import sys
 import os
 import praw
-import math
 from datetime import datetime
 from src.db.dynamo import get_last_searched_date, save_last_searched_date
-from src.parsers.reddit_parser import get_comment_data, get_submission_data, get_subreddit_data, get_comments
+from src.parsers.reddit_parser import get_submission_data, get_subreddit_data, get_comments
 from src.services.reddit_service import insert_comment, insert_submission, insert_subreddit
 from src.integrations.pushshift import get_submissions_with_keywords_for_interval
 from src.utils.time_interval import get_timestamp_interval_for_starting_date
@@ -46,7 +44,7 @@ def lambda_handler(event, context):
 
         params = {
             'subreddits': os.getenv('SUBREDDITS').split(),
-            'keywords': search_keywords.split('_') if search_keywords != None else [],
+            'keywords': search_keywords.split('_') if search_keywords is not None else [],
             'start': os.getenv('START_DATE'),
             'end': os.getenv('END_DATE'),
             'saveComments': bool(int(os.getenv('SAVE_COMMENTS'))),
@@ -121,7 +119,7 @@ def lambda_handler(event, context):
         for subreddit_id in subreddits:
             subreddit = reddit.subreddit(subreddit_id)
 
-            if params['saveSubreddits'] == True:
+            if params['saveSubreddits']:
                 print(f'Saving subreddits')
                 subreddit_data = get_subreddit_data(subreddit)
                 insert_subreddit(
@@ -137,13 +135,13 @@ def lambda_handler(event, context):
                 submission = reddit.submission(submission_id)
 
                 submission_data = get_submission_data(submission)
-                if submission_data != None:
+                if submission_data is not None:
                     insert_submission(
                         submission_data,  
                         params['submissionsCollection']
                     )
 
-                if params['saveComments'] == True:
+                if params['saveComments']:
                     print(f'Saving comments')
                     comments = get_comments(submission)
                 

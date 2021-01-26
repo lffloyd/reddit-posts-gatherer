@@ -71,6 +71,7 @@ Globals:
     CodeUri: ./
     Handler: app.lambda_handler
     Runtime: python3.8
+    MemorySize: 256
     Environment:
       Variables:
         LAST_SEARCHED_DATE_TABLE: !Sub "${AWS::StackName}-last-searched-date-table"
@@ -99,17 +100,25 @@ Resources:
       BillingMode: PAY_PER_REQUEST
       TableName: !Sub "${AWS::StackName}-last-searched-date-table"
   
-  GatherPostsFunctionTrigger:
+  GatherPostsInEnglishFunctionTrigger:
     Type: AWS::Events::Rule
     Properties:
-      Description: Triggers the lambda functions
-      Name: !Sub reddit-posts-gatherer-trigger
+      Description: Triggers the lambda function
+      Name: !Sub reddit-posts-gatherer-english-trigger
+      ScheduleExpression: rate(15 minutes)
+      Targets:
+        - Arn: !GetAtt GatherPostsInEnglishFunction.Arn
+          Id: GatherPostsInEnglishFunction
+  
+  GatherPostsInPortugueseFunctionTrigger:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Triggers the lambda function
+      Name: !Sub reddit-posts-gatherer-portuguese-trigger
       ScheduleExpression: rate(3 minutes)
       Targets:
         - Arn: !GetAtt GatherPostsInPortugueseFunction.Arn
           Id: GatherPostsInPortugueseFunction
-        - Arn: !GetAtt GatherPostsInEnglishFunction.Arn
-          Id: GatherPostsInEnglishFunction
   
   GatherPostsInPortugueseFunction:
     Type: AWS::Serverless::Function
@@ -139,7 +148,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt GatherPostsInPortugueseFunction.Arn
       Principal: events.amazonaws.com
-      SourceArn: !GetAtt GatherPostsFunctionTrigger.Arn
+      SourceArn: !GetAtt GatherPostsInPortugueseFunctionTrigger.Arn
   
   GatherPostsInPortugueseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -176,7 +185,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt GatherPostsInEnglishFunction.Arn
       Principal: events.amazonaws.com
-      SourceArn: !GetAtt GatherPostsFunctionTrigger.Arn
+      SourceArn: !GetAtt GatherPostsInEnglishFunctionTrigger.Arn
   
   GatherPostsInEnglishFunctionLogGroup:
     Type: AWS::Logs::LogGroup

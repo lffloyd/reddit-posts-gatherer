@@ -24,17 +24,19 @@ def get_submissions_with_keywords_for_interval(subreddit, interval, keyword = No
 
     list: a list of submission ids
     """
-    keyword_query = f'&q={keyword}' if keyword != None else ''
-    if keyword == None:
+    keyword_query = f'&q={keyword}' if keyword is not None else ''
+    if keyword is None:
         print(f'Searching without keywords...')
     
-    request_url = f'{PUSHSHIFT_URL}?subreddit={subreddit}&after={interval[0]}&before={interval[1]}&size={size}{keyword_query}'
+    request_url = f'{PUSHSHIFT_URL}?subreddit={subreddit}&after={interval[0]}&before={interval[1]}&size={size}&metadata=true{keyword_query}'
 
     response = requests.get(request_url)
+    if response.status_code != 200 or response.text is None:
+        raise Exception(response.text)
+    
+    response_json = response.json()
 
-    if (response.content == None):
+    if (response_json == None):
         return []
 
-    content = json.loads(response.content)
-
-    return list(map(lambda submission: submission["id"], content["data"]))
+    return list(map(lambda submission: submission["id"], response_json["data"]))

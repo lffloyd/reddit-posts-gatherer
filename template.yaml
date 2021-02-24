@@ -132,6 +132,7 @@ Resources:
           END_DATE: !Ref PortugueseEndDate
           LANGUAGE: !FindInMap [config, language, portuguese]
           MONGO_DATABASE: !Join ["", ["reddit-posts-gatherer-", !FindInMap [config, language, portuguese]]]
+          DAYS_PER_INTERVAL: 10
       Policies:
         - Version: "2012-10-17"
           Statement:

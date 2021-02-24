@@ -23,7 +23,7 @@ DEFAULT_COLLECTIONS = {
 DATE_FORMAT = '%Y-%m-%d'
 
 
-def get_all_submissions_from_intervals(keyword, subreddit, intervals, size = 500):
+def get_all_submissions_from_intervals(subreddit, intervals, keyword = None, size = 500):
     """Search for a keyword inside a subreddit within time intervals
     and returns the respective submission ids found.
 
@@ -60,8 +60,7 @@ def get_all_submissions_from_intervals(keyword, subreddit, intervals, size = 500
 parser = argparse.ArgumentParser(description='Gather Reddit submission data and sends to cloud database.')
 
 parser.add_argument('--subreddits', nargs='+', help='subreddits to gather', required=True)
-parser.add_argument('--keywords', nargs='+', help='keywords to search for on the subreddit', required=True)
-parser.add_argument('--searchResultsPath', type=str, help='path to save the list of submission ids returned by the search', required=False, default='search/results.txt')
+parser.add_argument('--keywords', nargs='+', help='keywords to search for on the subreddit', required=False, default=None)
 parser.add_argument('--start', type=str, help='gather posts written after this date', required=True)
 parser.add_argument('--end', type=str, help='gather posts written before this date', required=True)
 parser.add_argument('--saveComments', type=int, help='wheter should save submission comments', required=False, default=False)
@@ -69,13 +68,12 @@ parser.add_argument('--saveSubreddits', type=int, help='wheter should save submi
 parser.add_argument('--submissionsCollection', type=str, help='MongoDB collection to save submissions', required=False, default=DEFAULT_COLLECTIONS['SUBMISSIONS'])
 parser.add_argument('--commentsCollection', type=str, help='MongoDB collection to save comments', required=False, default=DEFAULT_COLLECTIONS['COMMENTS'])
 parser.add_argument('--subredditsCollection', type=str, help='MongoDB collection to save subreddits', required=False, default=DEFAULT_COLLECTIONS['SUBREDDITS'])
-parser.add_argument('--daysPerInterval', type=int, help='no. of days per search interval', required=False)
+parser.add_argument('--daysPerInterval', type=float, help='no. of days per search interval', required=False)
 
 args = parser.parse_args()
 params = {
     'subreddits': args.subreddits,
-    'keywords': args.keywords,
-    'searchResultsPath': args.searchResultsPath,
+    'keywords': args.keywords if args.keywords is not None else [],
     'start': args.start,
     'end': args.end,
     'saveComments': bool(args.saveComments),
@@ -84,45 +82,47 @@ params = {
     'commentsCollection': args.commentsCollection,
     'subredditsCollection': args.subredditsCollection,
     'daysPerInterval': args.daysPerInterval,
+    'mongoDB': os.getenv('MONGO_DATABASE'),
 }
-
+print(f'Running on local ENV with params {params}')
 
 startDate = datetime.strptime(params['start'], DATE_FORMAT)
 endDate = datetime.strptime(params['end'], DATE_FORMAT)
 days = params['daysPerInterval']
 timestampsInterval = list(get_timestamps_interval(startDate, endDate, days_per_interval=days) \
-    if (days != None) else get_timestamps_interval(startDate, endDate))
-
+    if days is not None else get_timestamps_interval(startDate, endDate))
 
 print(f'Starting search...')
 
 subreddit_submissions_map = {}
 
 for subreddit in params['subreddits']:
-    submission_ids = []
+    submission_ids = set()
 
     print(f'Searching inside "{subreddit}" subreddit...')
 
-    for keyword in params['keywords']:
-        print(f'Searching for "{keyword}" keyword...')
-
-        new_submission_ids = get_all_submissions_from_intervals(keyword, subreddit, timestampsInterval)
+    if len(params['keywords']) == 0:
+        new_submission_ids = get_all_submissions_from_intervals(subreddit, timestampsInterval)
 
         if (len(new_submission_ids) == 0): continue
 
-        original_ids_set = set(submission_ids)
-        new_ids_set = set(new_submission_ids)
-        new_ids_without_duplicates = new_ids_set - original_ids_set
+        submission_ids = submission_ids.union(new_submission_ids)
+    else:
+        for keyword in params['keywords']:
+            print(f'Searching for "{keyword}" keyword...')
 
-        submission_ids = submission_ids + list(new_ids_without_duplicates)
+            new_submission_ids = get_all_submissions_from_intervals(subreddit, timestampsInterval, keyword)
 
-    subreddit_submissions_map[subreddit] = submission_ids
+            if (len(new_submission_ids) == 0): continue
+
+            submission_ids = submission_ids.union(new_submission_ids)
+
+    subreddit_submissions_map[subreddit] = list(submission_ids)
 
 
 all_ids = [sub_id for id_list in list(subreddit_submissions_map.values()) for sub_id in id_list]
 total_submissions = len(all_ids)
 print(f'{total_submissions} submissions found with the given keywords ({", ".join(params["keywords"])}) and within the date range ({startDate.date()}, {endDate.date()})')
-
 
 print(f'Start gathering...')
 
@@ -136,10 +136,10 @@ reddit = praw.Reddit(
 
 subreddits = list(subreddit_submissions_map.keys())
 for k in range(len(subreddits)):
-    subreddit = reddit.subreddit(subreddits[k])
-    print("Subreddit name: " + subreddit.display_name)
+    print("Subreddit name: " + subreddits[k])
 
     if params['saveSubreddits']:
+        subreddit = reddit.subreddit(subreddits[k])
         subreddit_data = get_subreddit_data(subreddit)
         insert_subreddit(
             subreddit_data, 
@@ -156,7 +156,7 @@ for k in range(len(subreddits)):
         submission = reddit.submission(submissions[i])
 
         submission_data = get_submission_data(submission)
-        if submission_data != None:
+        if submission_data is not None:
             insert_submission(
                 submission_data, 
                 params['submissionsCollection']
@@ -175,7 +175,9 @@ for k in range(len(subreddits)):
                 )
     
     update_progress_bar(no_of_submissions_in_subreddit, no_of_submissions_in_subreddit)
-        
 
 
 print("\nFinished gathering.")
+
+with open('gatherer_logs.txt', 'a+') as file:
+    file.write(f'Date range: {startDate} - {endDate}\tTotal submissions: {total_submissions}\n')

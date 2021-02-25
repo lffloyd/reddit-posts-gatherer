@@ -29,6 +29,7 @@ def get_submissions_with_keywords_for_interval(subreddit, interval, keyword = No
         print(f'Searching without keywords...')
     
     request_url = f'{PUSHSHIFT_URL}?subreddit={subreddit}&after={interval[0]}&before={interval[1]}&size={size}&metadata=true{keyword_query}'
+    print(request_url)
 
     response = requests.get(request_url)
     if response.status_code != 200 or response.text is None:

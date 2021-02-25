@@ -26,17 +26,17 @@ def get_timestamps_interval(start_date, end_date, days_per_interval = 90):
 
     start_at = start_timestamp
     end_at = start_at + period
-    yield (start_at, end_at)
+    yield (int(start_at), int(end_at))
 
     padding = 1
     while end_at + period <= end_timestamp:
         start_at = end_at + padding
         end_at = (start_at - padding) + period
-        yield (start_at, end_at)
+        yield (int(start_at), int(end_at))
     
     start_at = end_at + padding
     end_at = end_timestamp
-    yield (start_at, end_at)
+    yield (int(start_at), int(end_at))
 
 
 def get_timestamp_interval_for_starting_date(start_date, max_end_date, days_per_interval = 90):

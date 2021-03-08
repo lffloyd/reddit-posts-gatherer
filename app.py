@@ -5,7 +5,7 @@ from datetime import datetime
 from src.db.dynamo import get_last_searched_date, save_last_searched_date
 from src.parsers.reddit_parser import get_submission_data, get_subreddit_data, get_comments
 from src.services.reddit_service import insert_comment, insert_submission, insert_subreddit
-from src.integrations.pushshift import get_submissions_with_keywords_for_interval
+from src.integrations.pushshift import get_ids_from_submissions_with_keywords_for_interval
 from src.utils.time_interval import get_timestamp_interval_for_starting_date
 
 
@@ -83,7 +83,7 @@ def lambda_handler(event, context):
             print(f'Searching inside "{subreddit}" subreddit...')
 
             if len(params['keywords']) == 0:
-                new_submission_ids = get_submissions_with_keywords_for_interval(subreddit, interval)
+                new_submission_ids = get_ids_from_submissions_with_keywords_for_interval(subreddit, interval)
 
                 if (len(new_submission_ids) == 0): continue
 
@@ -92,7 +92,7 @@ def lambda_handler(event, context):
                 for keyword in params['keywords']:
                     print(f'Searching for "{keyword}" keyword...')
 
-                    new_submission_ids = get_submissions_with_keywords_for_interval(subreddit, interval, keyword)
+                    new_submission_ids = get_ids_from_submissions_with_keywords_for_interval(subreddit, interval, keyword)
 
                     if (len(new_submission_ids) == 0): continue
 

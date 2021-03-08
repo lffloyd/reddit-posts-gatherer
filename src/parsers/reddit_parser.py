@@ -53,7 +53,7 @@ def get_comment_data(raw_comment):
         "author": author,
         "body": raw_comment.body if hasattr(raw_comment, 'body') else None,
         "created_utc": raw_comment.created_utc if hasattr(raw_comment, 'created_utc') else None,
-        "date": date.strftime('%Y-%m-%d %H:%M:%S') if date != None else None,
+        "date": date.strftime('%Y-%m-%d %H:%M:%S') if date is not None else None,
         "distinguished": raw_comment.distinguished if hasattr(raw_comment, 'distinguished') else None,
         "edited": raw_comment.edited if hasattr(raw_comment, 'edited') else None,
         "id": raw_comment.id if hasattr(raw_comment, 'id') else None,
@@ -95,7 +95,7 @@ def get_submission_data(raw_submission):
         "author": author,
         "clicked": raw_submission.clicked if hasattr(raw_submission, 'clicked') else None,
         "created_utc": raw_submission.created_utc if hasattr(raw_submission, 'created_utc') else None,
-        "date": date.strftime('%Y-%m-%d %H:%M:%S') if date != None else None,
+        "date": date.strftime('%Y-%m-%d %H:%M:%S') if date is not None else None,
         "distinguished": raw_submission.distinguished if hasattr(raw_submission, 'distinguished') else None,
         "edited": raw_submission.edited if hasattr(raw_submission, 'edited') else None,
         "id": raw_submission.id if hasattr(raw_submission, 'id') else None,
@@ -118,7 +118,47 @@ def get_submission_data(raw_submission):
         "upvote_ratio": raw_submission.upvote_ratio if hasattr(raw_submission, 'upvote_ratio') else None,
         "url": raw_submission.url if hasattr(raw_submission, 'url') else None
     }
-    
+
+
+def get_submission_data_from_pushshift(raw_submission):
+    """Creates a submission object from a Pushshift Submission JSON
+
+    Parameters:
+
+    raw_submission (dict): Pushshift Submission instance
+
+    Returns:
+
+    dict: object with information about a submission, like body, author or URL
+    """
+    if (not 'selftext' in raw_submission) or ('selftext' in raw_submission and raw_submission["selftext"] == "") or \
+        ('selftext' in raw_submission and raw_submission["selftext"] is not None and raw_submission["selftext"].strip() == "") or \
+            raw_submission["selftext"] == "[deleted]" or raw_submission["selftext"] == "[removed]":
+        return None
+
+    date = datetime.fromtimestamp(raw_submission["created_utc"]) if 'created_utc' in raw_submission else None
+
+    return {
+        "author": raw_submission["author"] if 'author' in raw_submission else None,
+        "created_utc": raw_submission["created_utc"] if 'created_utc' in raw_submission else None,
+        "date": date.strftime('%Y-%m-%d %H:%M:%S') if date is not None else None,
+        "id": raw_submission["id"] if 'id' in raw_submission else None,
+        "is_original_content": raw_submission["is_original_content"] if 'is_original_content' in raw_submission else None,
+        "is_text_only": raw_submission["is_self"] if 'is_self' in raw_submission else None,
+        "locked": raw_submission["locked"] if 'locked' in raw_submission else None,
+        "num_comments": raw_submission["num_comments"] if 'num_comments' in raw_submission else None,
+        "over_18": raw_submission["over_18"] if 'over_18' in raw_submission else None,
+        "permalink": raw_submission["permalink"] if 'permalink' in raw_submission else None,
+        "score": raw_submission["score"] if 'score' in raw_submission else None,
+        "body": raw_submission["selftext"] if 'selftext' in raw_submission else None,
+        "spoiler": raw_submission["spoiler"] if 'spoiler' in raw_submission else None,
+        "stickied": raw_submission["stickied"] if 'stickied' in raw_submission else None,
+        "subreddit_id": raw_submission["subreddit_id"] if 'subreddit_id' in raw_submission else None,
+        "subreddit_name": raw_submission["subreddit"] if 'subreddit' in raw_submission else None,
+        "title": raw_submission["title"] if 'title' in raw_submission else None,
+        "upvote_ratio": raw_submission["upvote_ratio"] if 'upvote_ratio' in raw_submission else None,
+        "url": raw_submission["url"] if 'url' in raw_submission else None
+    }
 
 def get_subreddit_data(raw_subreddit):
     """Creates a subreddit object from a PRAW Subreddit instance

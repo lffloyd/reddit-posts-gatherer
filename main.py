@@ -9,7 +9,7 @@ import math
 from datetime import datetime
 from src.parsers.reddit_parser import get_comment_data, get_submission_data, get_subreddit_data, get_comments
 from src.services.reddit_service import insert_comment, insert_submission, insert_subreddit
-from src.integrations.pushshift import get_submissions_with_keywords_for_interval
+from src.integrations.pushshift import get_ids_from_submissions_with_keywords_for_interval
 from src.utils.progress_bar import update_progress_bar
 from src.utils.time_interval import get_timestamps_interval
 
@@ -48,7 +48,7 @@ def get_all_submissions_from_intervals(subreddit, intervals, keyword = None, siz
         end_date = datetime.fromtimestamp(interval[1])
         print(f'Searching keyword within range ({start_date}, {end_date})...')
 
-        submission_ids = get_submissions_with_keywords_for_interval(subreddit, interval, keyword)
+        submission_ids = get_ids_from_submissions_with_keywords_for_interval(subreddit, interval, keyword)
 
         new_ids_without_duplicates = set(submission_ids) - set(ids)
 

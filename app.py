@@ -145,7 +145,7 @@ def lambda_handler(event, context):
 
                     count += len(new_submissions)
 
-        print(f'{count} submissions found and collected with the given keywords ({", ".join(params["keywords"])}) and within the date range ({startDate.date()}, {endDate.date()})')
+        print(f'{count} submissions found and collected with the given keywords ({", ".join(params["keywords"])})')
 
         last_searched_date = datetime.fromtimestamp(interval[1])
         save_last_searched_date(last_searched_date)
